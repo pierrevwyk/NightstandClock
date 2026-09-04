@@ -11,17 +11,36 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Android project
+      - name: Find and extract Android project
         run: |
-          mkdir project
-          unzip -q NightstandClock-AndroidProject.zip -d project
-          cp -a project/
-          
+          set -e
+          ZIP_FILE=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -iname "*.zip" | head -n 1)
+          echo "ZIP found: $ZIP_FILE"
+          test -n "$ZIP_FILE"
+          mkdir extracted
+          unzip -q "$ZIP_FILE" -d extracted
+          echo "Extracted files:"
+          find extracted -maxdepth 2 -type f | head -50
+
+      - name: Locate project
+        run: |
+          set -e
+          if [ -f extracted/settings.gradle.kts ]; then
+            echo "Project is at extracted/"
+            echo "PROJECT_DIR=extracted" >> "$GITHUB_ENV"
+          else
+            PROJECT=$(find extracted -name settings.gradle.kts -type f | head -n 1)
+            test -n "$PROJECT"
+            DIR=$(dirname "$PROJECT")
+            echo "Project is at $DIR"
+            echo "PROJECT_DIR=$DIR" >> "$GITHUB_ENV"
+          fi
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -30,17 +49,17 @@ jobs:
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Download Gradle
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
-          unzip -q gradle-8.9-bin.zip
-          echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
 
       - name: Build APK
+        working-directory: ${{ env.PROJECT_DIR }}
         run: gradle :app:assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: NightstandClock-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
