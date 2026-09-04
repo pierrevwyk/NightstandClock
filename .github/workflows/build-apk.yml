@@ -15,8 +15,8 @@ jobs:
         run: |
           mkdir project
           unzip -q NightstandClock-AndroidProject.zip -d project
-          cp -a project/. .
-
+          cp -a project/
+          
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
