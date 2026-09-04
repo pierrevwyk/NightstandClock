@@ -13,9 +13,9 @@ jobs:
 
       - name: Extract Android project
         run: |
-          unzip -q NightstandClock-AndroidProject.zip -d extracted
-          cp -r extracted/NightstandClock/* .
-          cp -r extracted/NightstandClock/.[!.]* . 2>/dev/null || true
+          mkdir project
+          unzip -q NightstandClock-AndroidProject.zip -d project
+          cp -a project/. .
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -30,10 +30,11 @@ jobs:
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Install Gradle
+      - name: Download Gradle
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gradle
+          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
+          unzip -q gradle-8.9-bin.zip
+          echo "$PWD/gradle-8.9/bin" >> "$GITHUB_PATH"
 
       - name: Build APK
         run: gradle :app:assembleDebug --no-daemon
